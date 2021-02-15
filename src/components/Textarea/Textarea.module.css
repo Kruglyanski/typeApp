@@ -1,20 +1,34 @@
 .wrapper {
     width: 70vw;
-    height: 30vw;
-    margin: 0 auto;
-    border: solid 2px black;
-    border-radius: 5px;
+    height: auto;
+    min-height: 400px;
+    background-color: #fff;
 }
 
-.symbBlue{
-    color: blue;
+b.bold {
+    font-size: 30px;
 }
 
-.symbGreen{
+.button{
+    width: 140px;
+    height: 30px;
+}
+
+.darkTextarea {
+    background-color: dimgrey;
+    color: white;
+}
+
+.lightTextarea {
+    background-color: white;
+    color: black;
+}
+
+.symbolGreen {
     background-color: greenyellow;
 }
 
-.symbRed{
+.symbolRed {
     background-color: red;
 }
 

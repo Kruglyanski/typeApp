@@ -1,100 +1,119 @@
-import React, {useCallback, useEffect, useState} from 'react'
+import React, {useCallback, useEffect} from 'react'
 import cls from './Textarea.module.css'
-import {textApi} from '../../api/api'
+import {useDispatch, useSelector} from 'react-redux'
+import {
+    loadText,
+    setAccuracy,
+    setCounter,
+    setIsStarted,
+    setSpeed,
+    setState,
+    setTime,
+    setTotalCount
+} from '../../store/textareaReducer'
+import {setAlertShow, setIsDone, setModalShow} from '../../store/appReducer'
+import {langCheck} from '../../utils/langUtil'
+import {RootState} from '../../store/rootReducer'
+
 
 export const Textarea: React.FC = () => {
-    const [text, setText] = useState([
-        {id: 0, value: null, isActive: false, isWrong: false}
-    ])
+
+    const text = useSelector((state: RootState) => state.textarea)
+    const dispatch = useDispatch()
+    const isLightTheme = useSelector((state: RootState) => state.app.isLightTheme)
+    const isDone = useSelector((state: RootState) => state.app.isDone)
+
+    useEffect(() => {
+        if (text.isStarted) {
+            const interval = setInterval(() => {
+                dispatch(setTime())
+                dispatch(setSpeed())
+            }, 1000)
+            if (isDone) {
+                clearInterval(interval)
+            }
+            return function cleanup() {
+                clearInterval(interval)
+            }
+        }
+
+    }, [text.isStarted, isDone, dispatch])
 
 
     useEffect(() => {
-        async function loadText() {
-            const data = await textApi()
-            const text = data.split('').map((symbol: string, index: number) => {
-                if (index === 0) {
-                    return (
-                        {id: index, value: symbol, isActive: true, isWrong: false}
-                    )
 
-                }
-                return (
-                    {id: index, value: symbol, isActive: false, isWrong: false}
-                )
-            })
-            setText(text)
+        dispatch(loadText(text.language))
 
-        }
-
-        loadText()
-
-    }, [])
+    }, [dispatch])
 
     const keydownHandler = useCallback((event) => {
+        dispatch(setIsStarted(true))
+        dispatch(setTotalCount())
+        const currentSymbol = text.symbols.find((i) => i.isActive)
 
-        const currentSymbol = text.find(i => i.isActive)
-
+        if (langCheck(text.language, event)) {
+            dispatch(setAlertShow(true))
+        } else {
+            dispatch(setAlertShow(false))
+        }
         if (currentSymbol && (event.key === currentSymbol.value)) {
 
-            setText(prevState => {
+            const payload = text.symbols.map((i) => {
+                if (currentSymbol && (i.id === currentSymbol.id + 1) ) {
+                    dispatch(setCounter())
 
-                return (
-                    prevState.map(i => {
-
-                        if (currentSymbol && i.id === currentSymbol.id + 1) {
-                            return {...i, isActive: true}
-                        }
-                        return {...i, isActive: false, isWrong: false}
-                    })
-                )
-
-
+                    return {...i, isActive: true}
+                }
+                return {...i, isActive: false, isWrong: false}
             })
-            console.log('1', text)
+            dispatch(setState(payload))
 
         } else {
+            const payload = text.symbols.map((i) => {
 
-            setText(prevState => {
-
-                return (
-
-                    prevState.map(i => {
-
-                        if (currentSymbol && i.id === currentSymbol.id) {
-                            return {...i, isActive: true, isWrong: true}
-                        }
-                        return {...i, isActive: false, isWrong: false}
-                    })
-                )
-
-
+                if (currentSymbol && i.id === currentSymbol.id) {
+                    return {...i, isActive: true, isWrong: true}
+                }
+                return {...i, isActive: false, isWrong: false}
             })
+            dispatch(setState(payload))
         }
-    }, [text])
+
+        dispatch(setAccuracy())
+
+        if (text.symbols.length  === text.counter + 1) {
+            dispatch(setIsDone(true))
+            dispatch(setModalShow())
+        }
+    }, [text, dispatch])
 
 
     useEffect(() => {
-        document.addEventListener('keydown', keydownHandler, false)
+        document.addEventListener('keypress', keydownHandler, false)
 
         return () => {
-            document.removeEventListener('keydown', keydownHandler, false)
+            document.removeEventListener('keypress', keydownHandler, false)
         }
     }, [keydownHandler])
 
+    const themeStyles = isLightTheme
+        ?
+        ('border w-75 p-3 rounded float-left ' + cls.lightTextarea)
+        :
+        ('border w-75 p-3 rounded float-left ' + cls.darkTextarea)
 
     return (
         <div>
-            {console.log('2', text)}
-            <div className={cls.wrapper}>
-                {text.map((i) => {
+            <div className={themeStyles + ' ' + cls.wrapper} style={{fontSize: text.fontSize + 'px'}}>
+                {text.symbols.map((i) => {
                     if (i.isActive && !i.isWrong) {
-                        return <span key={i.id} className={cls.symbGreen}>{i.value}</span>
+                        return <span key={i.id} className={cls.symbolGreen}>{i.value}</span>
                     }
                     if (i.isActive && i.isWrong) {
-                        return <span key={i.id} className={cls.symbRed}>{i.value}</span>
+                        return <span key={i.id} className={cls.symbolRed}>{i.value}</span>
                     }
                     return (
-                        <span key={i.id} className={cls.symbBlue}>{i.value}</span>
+                        <span key={i.id}>{i.value}</span>
                     )
                 })
                 }
